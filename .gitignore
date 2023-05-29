@@ -1,1 +1,3 @@
-tcs > playground.py
+.idea
+.pytest_cache
+tcs/playground.py
