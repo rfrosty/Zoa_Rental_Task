@@ -1,5 +1,4 @@
 import pytest
-
 from utils.classes import BaseElement
 from utils.config import window_dict, variable_dict
 import utils.locators as locator
@@ -8,11 +7,13 @@ from utils.scraping.bag.functions import apply_discount_code, return_total_outfi
 from utils.scraping.delivery.functions import submit_delivery_form, accept_terms
 from utils.scraping.billing.functions import submit_billing_form
 from utils.testing.bag import welcome20_discount_info_present_in_sidecart
+import pdb
 
 
 class TestWelcome20DiscountWorksForUser:
 
     def test_discount_works_on_bag_page(self):
+        pdb.set_trace()
         total_outfit_price = return_total_outfit_price(window_dict['window1'])
         initial_total_price = return_total_price(window_dict['window1'])
         apply_discount_code("WELCOME20", window_dict['window1'])
