@@ -22,7 +22,7 @@ chrome_options.add_argument('disable-infobars')
 
 
 class BaseElement(object):
-    def __init__(self, window, locator, locator_js=False, clickable=False, text_to_wait_until_present=None, waiting_time=10, waiting_time_after_scrolling_into_view=3, scroll_into_view=False, scroll_by=[], scroll_into_view_false=False):
+    def __init__(self, window, locator, locator_js=None, clickable=False, text_to_wait_until_present=None, time_to_wait_to_find_el=10, time_to_wait_after_scrolling_el_into_view=3, scroll_into_view=False, scroll_into_view_false=False, scroll_by=[]):
         self.window = window
         self.driver = window.driver
         self.locator = locator
@@ -30,6 +30,7 @@ class BaseElement(object):
             self.by = By.XPATH
         else:
             self.by = By.CSS_SELECTOR
+        self.locator_tuple = (self.by, self.locator)
         if locator_js:
             self.locator_js = locator_js.replace('"', '\\"')
         else:
@@ -39,18 +40,33 @@ class BaseElement(object):
             self.expected_condition = EC.element_to_be_clickable
         else:
             self.expected_condition = EC.visibility_of_element_located
-        self.locator = (self.by, self.locator)
-        self.web_element = None
-        self.waiting_time = waiting_time
-        self.time_to_wait_to_be_absent = None
         if scroll_into_view:
             self.scroll_into_view()
-            time.sleep(waiting_time_after_scrolling_into_view)
+            time.sleep(time_to_wait_after_scrolling_el_into_view)
         if scroll_into_view_false:
             self.scroll_into_view_false()
         if scroll_by:
             self.scroll_by(scroll_by[0], scroll_by[1])
+        self.time_to_wait_to_find_el = time_to_wait_to_find_el
+        self.time_to_wait_for_el_to_be_absent = None
+        self.web_element = None
         self.find()
+
+    @property
+    def text(self):
+        return self.web_element.text.strip()
+
+    @property
+    def attribute_value(self, attribute):
+        return self.web_element.get_attribute(attribute)
+
+    @property
+    def child_el(self, locator, by=By.CSS_SELECTOR):
+        return self.web_element.find_element(by, locator)
+
+    @property
+    def radio_btn_or_checkbox_is_selected(self):
+        return self.web_element.is_selected()
 
     def execute_javascript(self, javascript):
         self.driver.execute_script(javascript)
@@ -75,8 +91,8 @@ class BaseElement(object):
         while True:
             try:
                 if self.text_to_wait_until_present:
-                    WebDriverWait(self.driver, self.waiting_time).until(EC.text_to_be_present_in_element(self.locator, self.text_to_wait_until_present))
-                self.web_element = WebDriverWait(self.driver, self.waiting_time).until(self.expected_condition(self.locator))
+                    WebDriverWait(self.driver, self.time_to_wait_to_find_el).until(EC.text_to_be_present_in_element(self.locator_tuple, self.text_to_wait_until_present))
+                self.web_element = WebDriverWait(self.driver, self.time_to_wait_to_find_el).until(self.expected_condition(self.locator_tuple))
                 break
             except StaleElementReferenceException:
                 attempts += 1
@@ -84,10 +100,10 @@ class BaseElement(object):
                     raise Exception
 
     def wait_to_be_absent(self, time):
-        self.time_to_wait_to_be_absent = time
-        WebDriverWait(self.driver, self.time_to_wait_to_be_absent).until(EC.invisibility_of_element_located(self.locator))
+        self.time_to_wait_for_el_to_be_absent = time
+        WebDriverWait(self.driver, self.time_to_wait_for_el_to_be_absent).until(EC.invisibility_of_element_located(self.locator_tuple))
 
-    def move_to_element(self):
+    def move_mouse_to_el(self):
         self.window.actions.move_to_element(self.web_element)
 
     def click(self):
@@ -99,10 +115,6 @@ class BaseElement(object):
         self.click()
         time.sleep(1)
         self.click()
-
-    @property
-    def text(self):
-        return self.web_element.text.strip()
 
     def clear_text(self):
         self.web_element.clear()
@@ -120,22 +132,13 @@ class BaseElement(object):
     def press_upwards_key(self):
         self.web_element.send_keys(Keys.UP)
 
-    def get_attribute_value(self, attribute):
-        return self.web_element.get_attribute(attribute)
-
-    def find_child_el(self, locator, by=By.CSS_SELECTOR):
-        return self.web_element.find_element(by, locator)
-
-    def return_true_if_this_radio_btn_or_checkbox_is_selected(self):
-        return self.web_element.is_selected()
-
     def select_select_tag_option_tag_by_text(self, value):
         Select(self.web_element).select_by_visible_text(value)
 
 
 class BasePage(object):
     def __init__(self, url, width=None, height=None):
-        self.driver = webdriver.Chrome()
+        self.driver = webdriver.Chrome(executable_path='/Users/ryanfrost/coding/drivers/selenium/chromedriver')
         # add this arg to run it in headless mode: `options=chrome_options`
         self.actions = ActionChains(self.driver)
         self.url = url
@@ -143,6 +146,20 @@ class BasePage(object):
         self.height = height
         self.go()
         self.resize()
+
+    @property
+    def url_as_string(self):
+        return self.driver.current_url
+
+    @property
+    def list_of_els_that_have_width_and_height_not_0(self, locator, time_to_wait=10):
+        list_of_els = WebDriverWait(self.driver, time_to_wait).until(EC.visibility_of_all_elements_located((by, locator)))
+        list_of_base_els = []
+        for el in list_of_els:
+            new_base_el = BaseElement(self, locator)
+            new_base_el.web_element = el
+            list_of_base_els.append(new_base_el)
+        return list_of_base_els
 
     def execute_javascript(self, javascript):
         self.driver.execute_script(javascript)
@@ -158,10 +175,6 @@ class BasePage(object):
 
     def wait_for_url_to_contain_string(self, string):
         WebDriverWait(self.driver, 20).until(EC.url_contains(string))
-
-    @property
-    def url_as_string(self):
-        return self.driver.current_url
 
     def go_to_new_url(self, url):
         self.url = url
@@ -181,15 +194,6 @@ class BasePage(object):
     # def return_list_of_els(self, path, by=By.XPATH):
     #     return self.driver.find_elements(by, path)
 
-    def return_list_of_els_that_have_width_and_height_not_0(self, locator, by=By.CSS_SELECTOR, time_to_wait=20):
-        list_of_els = WebDriverWait(self.driver, time_to_wait).until(EC.visibility_of_all_elements_located((by, locator)))
-        list_of_base_els = []
-        for el in list_of_els:
-            new_base_el = BaseElement(self, locator, by=by)
-            new_base_el.web_element = el
-            list_of_base_els.append(new_base_el)
-        return list_of_base_els
-
     def close_current_tab(self, tab_to_switch_to=0):
         self.driver.close()
         self.switch_tab(tab_to_switch_to)
@@ -197,5 +201,5 @@ class BasePage(object):
     def go_back(self):
         self.driver.back()
 
-    def quit(self):
+    def close(self):
         self.driver.quit()

@@ -19,8 +19,8 @@ def click_discount_input_reveal_btn(window):
 
 
 def apply_discount_code(code, window):
+    scroll_to_discount_section(window)
     try:
-        scroll_to_discount_section(window)
         BaseElement(window, locator.bag_discount_input)
     except TimeoutException:
         click_discount_input_reveal_btn(window)

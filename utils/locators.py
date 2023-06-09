@@ -1,4 +1,4 @@
-### BAG ###
+### BAG PAGE ###
 
 bag_discount_code_section = "#discount-code-btn"
 bag_discount_code_section_js = "//*[@id='discount-code-btn']"
@@ -18,7 +18,7 @@ sidecart_welcome20 = "//*[@id='checkout-sidecart']//*[text()='WELCOME20:']"
 sidecart_discount_value = "[class*='discount-value'] :first-child"
 sidecart_total_value = "#sidecart-total"
 
-### DELIVERY ###
+### DELIVERY TAB ###
 
 delivery_first_name = "#Name"
 delivery_last_name = "#Surname"
@@ -29,6 +29,6 @@ delivery_terms_checkbox = "#Terms"
 delivery_terms_checkbox_js = "//*[@id='Terms']"
 delivery_continue = "#submitDeliveryStep"
 
-### BILLING ###
+### BILLING TAB ###
 
 billing_continue = "#submitBillingStep"
